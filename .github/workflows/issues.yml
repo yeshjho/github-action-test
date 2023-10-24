@@ -126,11 +126,12 @@ jobs:
         ' -f user="${{ env.USER_NAME }}" > project_data.json
 
         echo 'project_global_id='$(jq '.data.user.projectV2.id' project_data.json) >> $GITHUB_OUTPUT
-        echo 'column_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' project_data.json) >> $GITHUB_OUTPUT
+        echo 'field_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' project_data.json) >> $GITHUB_OUTPUT
+        echo 'value_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .options[] | select(.name==${{ steps.get_fix_status.outputs.column_name }}) |.id' project_data.json) >> $GITHUB_OUTPUT
     
     - name: Move Card to Appropriate Column
       id: move_card_to_pending_release_column
-      if: ${{ steps.get_column_id.outputs.column_id != '' }}
+      if: ${{ steps.get_column_id.outputs.field_id != '' }}
       env:
         GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
       run: |
@@ -155,7 +156,7 @@ jobs:
               }
             }
           }
-        ' -f project=${{ steps.get_column_id.outputs.project_global_id }} -f item=${{ steps.get_card_id.outputs.card_id }} -f status_field=${{ steps.get_column_id.outputs.column_id }} -f status_value="${{ steps.get_fix_status.outputs.column_name }}"
+        ' -f project=${{ steps.get_column_id.outputs.project_global_id }} -f item=${{ steps.get_card_id.outputs.card_id }} -f status_field=${{ steps.get_column_id.outputs.field_id }} -f status_value="${{ steps.get_column_id.outputs.value_id }}"
 
   process_final_fix_issue:
     needs: issue_management
