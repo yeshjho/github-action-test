@@ -67,8 +67,8 @@ jobs:
           exit 0
         }
 
-        echo 'issue_status='$(jq '.data.repository.issue.labels.nodes[] | select(.name== "fixing") | .name' card_data.json) >> $GITHUB_OUTPUT
-        echo 'issue_status='$(jq '.data.repository.issue.labels.nodes[] | select(.name== "fixed") | .name' card_data.json) >> $GITHUB_OUTPUT
+        echo 'issue_status='$(jq '.data.repository.issue.labels.nodes[] | select(.name== "fixing") | .name' issue_labels.json) >> $GITHUB_OUTPUT
+        echo 'issue_status='$(jq '.data.repository.issue.labels.nodes[] | select(.name== "fixed") | .name' issue_labels.json) >> $GITHUB_OUTPUT
     
     - name: Get Card Id
       id: get_card_ids
@@ -95,9 +95,7 @@ jobs:
               }
             }
           }
-        ' -f user="${{ github.repository_owner }}" -f repo="${{ github.event.repository.name }}" > card_data.json || {
-          exit 0
-        }
+        ' -f user="${{ github.repository_owner }}" -f repo="${{ github.event.repository.name }}" > card_data.json
 
         echo 'card_id='$(jq '.data.repository.issue.projectItems.nodes[] | select(.project.number== '$PROJECT_ID') | .id' card_data.json) >> $GITHUB_OUTPUT
     
