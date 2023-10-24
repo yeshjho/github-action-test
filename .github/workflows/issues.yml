@@ -76,7 +76,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
       run: |
-        gh api graphql -H "X-Github-Next-Global-ID: 1" -f query='
+        gh api graphql -f query='
           query($user: String!, $repo: String!) {
             repository(name: $repo, owner: $user) {
               issue(number: ${{ steps.get_issue_number.outputs.issue_number }}) {
@@ -128,6 +128,15 @@ jobs:
         echo 'project_global_id='$(jq '.data.user.projectV2.id' project_data.json) >> $GITHUB_OUTPUT
         echo 'column_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' project_data.json) >> $GITHUB_OUTPUT
     
+    - uses: monry/actions-get-project-id@v2
+      id: asdf
+      with:
+        github-token: ${{ secrets.SECRET_TOKEN }}
+        project-owner: ${{ env.USER_NAME }}
+        project-number: ${{ env.PROJECT_ID }}
+      run: |
+        echo '${{ steps.asdf.outputs.project-id }}'
+
     - name: Move Card to Appropriate Column
       id: move_card_to_pending_release_column
       if: ${{ steps.get_column_id.outputs.column_id != '' }}
