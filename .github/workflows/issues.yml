@@ -54,14 +54,10 @@ jobs:
       run: |
         commit_message="${{ github.event.head_commit.message }}"
         shopt -s nocasematch
-        echo "final fix on #$ISSUE_NUMBER"
-        echo "fixing #$ISSUE_NUMBER"
         if [[ $commit_message =~ "final fix on #$ISSUE_NUMBER" ]]; then
-          echo "fix_status=final" >> $GITHUB_ENV
-          echo "final"
+          echo "fix_status=final" >> $GITHUB_OUTPUT
         elif [[ $commit_message =~ "fixing #$ISSUE_NUMBER" ]]; then
-          echo "fix_status=fixing" >> $GITHUB_ENV
-          echo "fixing"
+          echo "fix_status=fixing" >> $GITHUB_OUTPUT
         fi
 
   process_fixing_issue:
