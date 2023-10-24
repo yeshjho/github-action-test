@@ -140,19 +140,10 @@ jobs:
           github.rest.issues.addLabels({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            issue_number: ${{ env.ISSUE_NUMBER }},
+            issue_number: ${{ steps.get_issue_number.outputs.issue_number }},
             labels: ["${{ steps.get_fix_status.outputs.fix_status }}"],
           });
-
-  process_final_fix_issue:
-    needs: issue_management
-    if: ${{ needs.issue_management.outputs.fix_status == 'fixed' }}
-    runs-on: ubuntu-latest
-    env:
-      ISSUE_NUMBER: ${{ needs.issue_management.outputs.issue_number }}
-    
-    steps:
-    
+          
     - name: Add Comment to Issue
       id: add_comment_to_issue
       uses: actions/github-script@v6
@@ -162,6 +153,6 @@ jobs:
           github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            issue_number: ${{ env.ISSUE_NUMBER }},
-            body: "It is fixed now, the fix will be in the next release.\n수정되었습니다. 다음 릴리즈에 반영될 예정입니다.",
+            issue_number: ${{ env.get_issue_number.outputs.issue_number }},
+            body: steps.get_fix_status.outputs.fix_status == 'fixing' ? "The bug is being fixed.\n수정 중입니다." : "It is fixed now, the fix will be in the next release.\n수정되었습니다. 다음 릴리즈에 반영될 예정입니다.",
           });
