@@ -155,7 +155,7 @@ jobs:
               }
             }
           }
-        ' -f project=${{ steps.get_column_id.outputs.project_global_id }} -f item=${{ steps.get_card_id.outputs.card_id }} -f status_field=${{ steps.get_column_id.outputs.column_id }} -f status_value="${{ steps.get_fix_status.outputs.column_name }}"
+        ' -f project=${{ steps.get_column_id.outputs.project_global_id }} -f item="${{ steps.get_card_id.outputs.card_id }}" -f status_field=${{ steps.get_column_id.outputs.column_id }} -f status_value="${{ steps.get_fix_status.outputs.column_name }}"
 
   process_final_fix_issue:
     needs: issue_management
