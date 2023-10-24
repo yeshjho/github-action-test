@@ -5,8 +5,6 @@ on:
     branches: [ "*" ]
 
 env:
-  USER_NAME: yeshjho
-  REPO_NAME: github-action-test
   PROJECT_ID: 4
 
 jobs:
@@ -34,10 +32,10 @@ jobs:
       run: |
         commit_message="${{ github.event.head_commit.message }}"
         shopt -s nocasematch
-        if [[ $commit_message =~ "final fix on #$ISSUE_NUMBER" ]]; then
-          echo "fix_status=final" >> $GITHUB_OUTPUT
+        if [[ $commit_message =~ "(final fix (on|of)|finished( working on| fixing)?)\s+(the\s+)?((bug|issue)\s+)?#$ISSUE_NUMBER" ]]; then
+          echo "fix_status=fixed" >> $GITHUB_OUTPUT
           echo "column_name=Pending Release" >> $GITHUB_OUTPUT
-        elif [[ $commit_message =~ "fixing #$ISSUE_NUMBER" ]]; then
+        elif [[ $commit_message =~ "(fixing|working on)\s+(the\s+)?((bug|issue)\s+)?#$ISSUE_NUMBER" ]]; then
           echo "fix_status=fixing" >> $GITHUB_OUTPUT
           echo "column_name=Fixing" >> $GITHUB_OUTPUT
         fi
@@ -65,7 +63,7 @@ jobs:
               }
             }
           }
-        ' -f user="${{ env.USER_NAME }}" -f repo="${{ env.REPO_NAME }}" > card_data.json || {
+        ' -f user="${{ github.repository_owner }}" -f repo="${{ github.repository }}" > card_data.json || {
           exit 0
         }
 
@@ -97,7 +95,7 @@ jobs:
               }
             }
           }
-        ' -f user="${{ env.USER_NAME }}" > project_data.json
+        ' -f user="${{ github.repository_owner }}" > project_data.json
 
         echo 'project_global_id='$(jq '.data.user.projectV2.id' project_data.json) >> $GITHUB_OUTPUT
         echo 'field_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' project_data.json) >> $GITHUB_OUTPUT
@@ -132,16 +130,8 @@ jobs:
           }
         ' -f project=${{ steps.get_column_id.outputs.project_global_id }} -f item=${{ steps.get_card_id.outputs.card_id }} -f status_field=${{ steps.get_column_id.outputs.field_id }} -f status_value=${{ steps.get_column_id.outputs.value_id }}
 
-  process_final_fix_issue:
-    needs: issue_management
-    if: ${{ needs.issue_management.outputs.fix_status == 'final' }}
-    runs-on: ubuntu-latest
-    env:
-      ISSUE_NUMBER: ${{ needs.issue_management.outputs.issue_number }}
-    
-    steps:
-    - name: Add "fixed" Label to Issue
-      id: add_fixed_label_to_issue
+    - name: Add Appropriate Label to Issue
+      id: add_label_to_issue
       uses: actions/github-script@v6
       with:
         github-token: ${{ secrets.SECRET_TOKEN }}
@@ -150,8 +140,17 @@ jobs:
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: ${{ env.ISSUE_NUMBER }},
-            labels: ["fixed"],
+            labels: ["${{ steps.get_fix_status.outputs.fix_status }}"],
           });
+
+  process_final_fix_issue:
+    needs: issue_management
+    if: ${{ needs.issue_management.outputs.fix_status == 'fixed' }}
+    runs-on: ubuntu-latest
+    env:
+      ISSUE_NUMBER: ${{ needs.issue_management.outputs.issue_number }}
+    
+    steps:
     
     - name: Add Comment to Issue
       id: add_comment_to_issue
