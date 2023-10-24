@@ -31,10 +31,7 @@ jobs:
       uses: actions/github-script@v6
       with:
         script: |
-          github.hook.after("request", async (response, options) => {
-            console.log(`${options.method} ${options.url}: ${response.status}`);
-          });
-          github.hook.error("request", async (error, options) => {});
+          github.hook.error("request", async (error, options) => { console.log(error); console.log(options); });
 
           github.rest.issues.get({
             owner: context.repo.owner,
@@ -42,6 +39,7 @@ jobs:
             issue_number: ${{ steps.get_issue_number.outputs.issue_number }},
           }).then(
             response => {
+              console.log(response);
               if (response && response.status === 200 && !response.data.pull_request) 
               {
                 core.setOutput('issue_exists', 'true');
