@@ -8,7 +8,7 @@ env:
   PROJECT_ID: 4
 
 jobs:
-  check_preconditions:
+  issue_management:
     runs-on: ubuntu-latest
 
     outputs:
@@ -62,56 +62,105 @@ jobs:
         shopt -s nocasematch
         if [[ $commit_message =~ "final fix on #$ISSUE_NUMBER" ]]; then
           echo "fix_status=final" >> $GITHUB_OUTPUT
+          echo "column_name=Pending Release" >> $GITHUB_OUTPUT
         elif [[ $commit_message =~ "fixing #$ISSUE_NUMBER" ]]; then
           echo "fix_status=fixing" >> $GITHUB_OUTPUT
+          echo "column_name=Fixing" >> $GITHUB_OUTPUT
         fi
-
-  process_fixing_issue:
-    needs: check_preconditions
-    if: ${{ needs.check_preconditions.outputs.fix_status == 'fixing' }}
-    runs-on: ubuntu-latest
-    env:
-      ISSUE_NUMBER: ${{ needs.check_preconditions.outputs.issue_number }}
     
-    steps:
-    - name: Get "Fixing" Column ID
-      id: get_fixing_column_id
-      uses: actions/github-script@v6
-      with:
-        script: |
-          github.rest.projects.listColumns({
-            project_id: ${{ env.PROJECT_ID }},
-          }).then(
-            response => {
-              const column = response.data.find(col => col.name === "Fixing");
-              if (column) 
-              {
-                core.setOutput('column_id', column.id.toString());
-              } 
-              else 
-              {
-                core.setFailed('Column "Fixing" not found in the project.');
+    - name: Get Card Id
+      id: get_card_id
+      if: ${{ steps.check_issue_exists.outputs.issue_exists == 'true' }}
+      env:
+        ISSUE_NUMBER: ${{ steps.get_issue_number.outputs.issue_number }}
+        GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
+      run: |
+        gh api graphql -f query='
+          query($user: String!, $repo: String!, $issue_num: Int!) {
+            repository(name: $repo, owner: $user) {
+              issue(number: $issue_num) {
+                projectItems(first: 10) {
+                  nodes {
+                    ... on ProjectV2Item {
+                      databaseId
+                      project {
+                        number
+                      }
+                    }
+                  }
+                }
               }
             }
-          );
+          }
+        ' -f user="yeshjho" -f repo="github-actions-test" -f issue_num=$ISSUE_NUMBER > card_data.json
+
+        echo 'card_id='$(jq '.data.repository.issue.projectItems.nodes[] | select(.project.number== '$PROJECT_ID') | .databaseId' card_data.json) >> $GITHUB_OUTPUT
     
-    - name: Move Card to "Fixing" Column
-      id: move_card_to_fixing_column
-      uses: actions/github-script@v6
-      with:
-        script: |
-          github.rest.projects.moveCard({
-            card_id: ${{ github.event.issue.node_id }},
-            position: 'top',
-            column_id: ${{ steps.get_fixing_column_id.outputs.column_id }},
-          });
-  
+    - name: Get Column ID
+      id: get_column_id
+      if: ${{ steps.get_fix_status.outputs.fix_status != '' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
+      run: |
+        gh api graphql -f query='
+          query($user: String!, $project: Int!) {
+            user(login: $user) {
+              projectV2(number: $project) {
+                id
+                fields(first: 20) {
+                  nodes {
+                    ... on ProjectV2SingleSelectField {
+                      id
+                      name
+                      options {
+                        id
+                        name
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ' -f user="yeshjho" -F project=$PROJECT_ID > project_data.json
+
+        echo 'column_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' project_data.json) >> $GITHUB_OUTPUT
+    
+    - name: Move Card to Appropriate Column
+      id: move_card_to_pending_release_column
+      if: ${{ steps.get_column_id.outputs.column_id != '' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
+      run: |
+        gh api graphql -f query='
+          mutation(
+            $project: ID!
+            $item: ID!
+            $status_field: ID!
+            $status_value: String!
+          ) {
+            set_status: updateProjectV2ItemFieldValue(input: {
+                projectId: $project
+                itemId: $item
+                fieldId: $status_field
+                value: { 
+                  singleSelectOptionId: $status_value
+                }
+              }
+            ) {
+              projectV2Item {
+                id
+              }
+            }
+          }
+        ' -f project=$PROJECT_ID -f item=${{ steps.get_card_id.outputs.card_id }} -f status_field=${{ steps.get_column_id.outputs.column_id }} -f status_value="${{ steps.get_fix_status.outputs.column_name }}"
+
   process_final_fix_issue:
-    needs: check_preconditions
-    if: ${{ needs.check_preconditions.outputs.fix_status == 'final' }}
+    needs: issue_management
+    if: ${{ needs.issue_management.outputs.fix_status == 'final' }}
     runs-on: ubuntu-latest
     env:
-      ISSUE_NUMBER: ${{ needs.check_preconditions.outputs.issue_number }}
+      ISSUE_NUMBER: ${{ needs.issue_management.outputs.issue_number }}
     
     steps:
     - name: Add "fixed" Label to Issue
@@ -137,5 +186,5 @@ jobs:
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: ${{ env.ISSUE_NUMBER }},
-            body: "It is fixed, and the fix will be in the next release.",
+            body: "It is fixed now, the fix will be in the next release.\n수정되었습니다. 다음 릴리즈에 반영될 예정입니다.",
           });
