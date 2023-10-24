@@ -2,13 +2,19 @@ name: Issues Management
 
 on:
   push:
-    branches: [ "*" ]
+    branches: [ "**" ]
 
 env:
   PROJECT_ID: 4
 
 jobs:
   issue_management:
+    continue-on-error: true
+    strategy:
+      max-parallel: 1
+      matrix:
+        commit: ${{ github.event.commits }}
+
     runs-on: ubuntu-latest
 
     outputs:
@@ -19,7 +25,7 @@ jobs:
     - name: Get Issue Number
       id: get_issue_number
       run: |
-        commit_message="${{ github.event.head_commit.message }}"
+        commit_message="${{ matrix.commit.message }}"
         if [[ $commit_message =~ \#([0-9]+) ]]; then
           issue_number=${BASH_REMATCH[1]}
           echo "issue_number=$issue_number" >> $GITHUB_OUTPUT
@@ -30,7 +36,7 @@ jobs:
       env:
         ISSUE_NUMBER: ${{ steps.get_issue_number.outputs.issue_number }}
       run: |
-        commit_message="${{ github.event.head_commit.message }}"
+        commit_message="${{ matrix.commit.message }}"
         shopt -s nocasematch
         if [[ $commit_message =~ (final fix (on|of)|finished( working on| fixing)?)\ +(the +)?((bug|issue) +)?#${{ env.ISSUE_NUMBER }} ]]; then
           echo "fix_status=fixed" >> $GITHUB_OUTPUT
