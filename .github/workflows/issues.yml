@@ -72,7 +72,6 @@ jobs:
       id: get_card_id
       if: ${{ steps.check_issue_exists.outputs.issue_exists == 'true' }}
       env:
-        ISSUE_NUMBER: ${{ steps.get_issue_number.outputs.issue_number }}
         GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
       run: |
         gh api graphql -f query='
@@ -92,7 +91,7 @@ jobs:
               }
             }
           }
-        ' -f user="yeshjho" -f repo="github-actions-test" -f issue_num=$ISSUE_NUMBER > card_data.json
+        ' -f user="yeshjho" -f repo="github-actions-test" -f issue_num=${{ steps.get_issue_number.outputs.issue_number }} > card_data.json
 
         echo 'card_id='$(jq '.data.repository.issue.projectItems.nodes[] | select(.project.number== '$PROJECT_ID') | .databaseId' card_data.json) >> $GITHUB_OUTPUT
     
