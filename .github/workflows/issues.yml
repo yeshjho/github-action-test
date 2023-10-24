@@ -91,7 +91,7 @@ jobs:
               }
             }
           }
-        ' -f user="yeshjho" -f repo="github-actions-test" -f issue_num=${{ steps.get_issue_number.outputs.issue_number }} > card_data.json
+        ' -f user="yeshjho" -f repo="github-actions-test" -f issue_num="${{ steps.get_issue_number.outputs.issue_number }}" > card_data.json
 
         echo 'card_id='$(jq '.data.repository.issue.projectItems.nodes[] | select(.project.number== '$PROJECT_ID') | .databaseId' card_data.json) >> $GITHUB_OUTPUT
     
