@@ -71,7 +71,7 @@ jobs:
         echo 'issue_status='$(jq '.data.repository.issue.labels.nodes[] | select(.name== "fixed") | .name' issue_labels.json) >> $GITHUB_OUTPUT
     
     - name: Get Card Id
-      id: get_card_ids
+      id: get_card_id
       if: ${{ steps.check_issue_status.outputs.no_issue != 'true' && 
               ((steps.get_fix_status_in_msg.outputs.fix_status == 'fixing' && steps.check_issue_status.outputs.issue_status == '') ||
                (steps.get_fix_status_in_msg.outputs.fix_status == 'fixed' && steps.check_issue_status.outputs.issue_status != 'fixed')) }}
