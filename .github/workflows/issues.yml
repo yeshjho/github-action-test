@@ -17,10 +17,6 @@ jobs:
 
     runs-on: ubuntu-latest
 
-    outputs:
-      issue_number: ${{ steps.get_issue_number.outputs.issue_number }}
-      fix_status: ${{ steps.get_fix_status.outputs.fix_status }}
-
     steps:
     - name: Get Issue Number
       id: get_issue_number
@@ -32,7 +28,7 @@ jobs:
         fi
 
     - name: Get Fix Status
-      id: get_fix_status
+      id: get_fix_status_in_msg
       env:
         ISSUE_NUMBER: ${{ steps.get_issue_number.outputs.issue_number }}
       run: |
@@ -45,10 +41,40 @@ jobs:
           echo "fix_status=fixing" >> $GITHUB_OUTPUT
           echo "column_name=Fixing" >> $GITHUB_OUTPUT
         fi
+
+    - name: Check Issue Status
+      id: check_issue_status
+      if: ${{ steps.get_fix_status_in_msg.outputs.fix_status != '' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
+      run: |
+        gh api graphql -f query='
+          query($user: String!, $repo: String!) {
+            repository(name: $repo, owner: $user) {
+              issue(number: ${{ steps.get_issue_number.outputs.issue_number }}) {
+                labels(first: 10) {
+                  nodes {
+                    ... on Label {
+                      name
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ' -f user="${{ github.repository_owner }}" -f repo="${{ github.event.repository.name }}" > issue_labels.json || {
+          echo "no_issue=true" >> $GITHUB_OUTPUT
+          exit 0
+        }
+
+        echo 'issue_status='$(jq '.data.repository.issue.labels.nodes[] | select(.name== "fixing") | .name' card_data.json) >> $GITHUB_OUTPUT
+        echo 'issue_status='$(jq '.data.repository.issue.labels.nodes[] | select(.name== "fixed") | .name' card_data.json) >> $GITHUB_OUTPUT
     
     - name: Get Card Id
-      id: get_card_id
-      if: ${{ steps.get_fix_status.outputs.fix_status != '' }}
+      id: get_card_ids
+      if: ${{ steps.check_issue_status.outputs.no_issue != 'true' && 
+              ((steps.get_fix_status_in_msg.outputs.fix_status == 'fixing' && steps.check_issue_status.outputs.issue_status == '') ||
+               (steps.get_fix_status_in_msg.outputs.fix_status == 'fixed' && steps.check_issue_status.outputs.issue_status != 'fixed')) }}
       env:
         GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
       run: |
@@ -105,7 +131,7 @@ jobs:
 
         echo 'project_global_id='$(jq '.data.user.projectV2.id' project_data.json) >> $GITHUB_OUTPUT
         echo 'field_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' project_data.json) >> $GITHUB_OUTPUT
-        echo 'value_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .options[] | select(.name== "${{ steps.get_fix_status.outputs.column_name }}") |.id' project_data.json) >> $GITHUB_OUTPUT
+        echo 'value_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .options[] | select(.name== "${{ steps.get_fix_status_in_msg.outputs.column_name }}") |.id' project_data.json) >> $GITHUB_OUTPUT
     
     - name: Move Card to Appropriate Column
       id: move_card_to_pending_release_column
@@ -147,12 +173,12 @@ jobs:
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: ${{ steps.get_issue_number.outputs.issue_number }},
-            labels: ["${{ steps.get_fix_status.outputs.fix_status }}"],
+            labels: ["${{ steps.get_fix_status_in_msg.outputs.fix_status }}"],
           });
     
     - name: Remove "Fixing" Label
       id: remove_fixing_label
-      if: ${{ steps.get_column_id.outputs.project_global_id != '' && steps.get_fix_status.outputs.fix_status == 'fixed' }}
+      if: ${{ steps.get_column_id.outputs.project_global_id != '' && steps.get_fix_status_in_msg.outputs.fix_status == 'fixed' }}
       uses: actions/github-script@v6
       with:
         github-token: ${{ secrets.SECRET_TOKEN }}
@@ -175,5 +201,5 @@ jobs:
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: ${{ steps.get_issue_number.outputs.issue_number }},
-            body: "${{ steps.get_fix_status.outputs.fix_status }}" == "fixing" ? "The bug is being fixed.\n수정 중입니다." : "It is fixed now, the fix will be in the next release.\n수정되었습니다. 다음 릴리즈에 반영될 예정입니다.",
+            body: "${{ steps.get_fix_status_in_msg.outputs.fix_status }}" == "fixing" ? "The bug is being fixed.\n수정 중입니다." : "It is fixed now, the fix will be in the next release.\n수정되었습니다. 다음 릴리즈에 반영될 예정입니다.",
           });
