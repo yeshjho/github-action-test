@@ -48,7 +48,7 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
       run: |
-        result = gh api graphql -f query='
+        if (gh api graphql -f query='
           query($user: String!, $repo: String!) {
             repository(name: $repo, owner: $user) {
               issue(number: ${{ steps.get_issue_number.outputs.issue_number }}) {
@@ -65,9 +65,7 @@ jobs:
               }
             }
           }
-        ' -f user="${{ env.USER_NAME }}" -f repo="${{ env.REPO_NAME }}" > card_data.json
-
-        if [[ $result -eq 0 ]]; then
+        ' -f user="${{ env.USER_NAME }}" -f repo="${{ env.REPO_NAME }}" > card_data.json) -eq 0; then
           echo 'card_id='$(jq '.data.repository.issue.projectItems.nodes[] | select(.project.number== '$PROJECT_ID') | .id' card_data.json) >> $GITHUB_OUTPUT
         fi
     
