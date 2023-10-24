@@ -67,7 +67,7 @@ jobs:
           }
         ' -f user="${{ env.USER_NAME }}" -f repo="${{ env.REPO_NAME }}" > card_data.json || true
 
-        if [[ $? -eq 0 ]]; then
+        if [[ -s card_data.json ]]; then
           echo 'card_id='$(jq '.data.repository.issue.projectItems.nodes[] | select(.project.number== '$PROJECT_ID') | .id' card_data.json) >> $GITHUB_OUTPUT
         fi
     
