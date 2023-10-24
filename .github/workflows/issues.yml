@@ -26,37 +26,9 @@ jobs:
           issue_number=${BASH_REMATCH[1]}
           echo "issue_number=$issue_number" >> $GITHUB_OUTPUT
         fi
-    
-    - name: Check If Issue Exists
-      id: check_issue_exists
-      if: ${{ steps.get_issue_number.outputs.issue_number != '' }}
-      uses: actions/github-script@v6
-      with:
-        script: |
-          github.hook.error("request", async (error, options) => { return error.response; });
 
-          github.rest.issues.get({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-            issue_number: ${{ steps.get_issue_number.outputs.issue_number }},
-          }).then(
-            response => {
-              if (response.status !== 200) 
-              {
-                console.log('No issue found: ' + response.status.toString());
-                return;
-              }
-
-              if (!response.data.pull_request) 
-              {
-                core.setOutput('issue_exists', 'true');
-              }
-            }
-          );
-    
     - name: Get Fix Status
       id: get_fix_status
-      if: ${{ steps.check_issue_exists.outputs.issue_exists == 'true' }}
       env:
         ISSUE_NUMBER: ${{ steps.get_issue_number.outputs.issue_number }}
       run: |
@@ -72,7 +44,7 @@ jobs:
     
     - name: Get Card Id
       id: get_card_id
-      if: ${{ steps.check_issue_exists.outputs.issue_exists == 'true' }}
+      if: ${{ steps.get_fix_status.outputs.fix_status != '' }}
       env:
         GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
       run: |
@@ -156,7 +128,7 @@ jobs:
               }
             }
           }
-        ' -f project=${{ steps.get_column_id.outputs.project_global_id }} -f item=${{ steps.get_card_id.outputs.card_id }} -f status_field=${{ steps.get_column_id.outputs.field_id }} -f status_value="${{ steps.get_column_id.outputs.value_id }}"
+        ' -f project=${{ steps.get_column_id.outputs.project_global_id }} -f item=${{ steps.get_card_id.outputs.card_id }} -f status_field=${{ steps.get_column_id.outputs.field_id }} -f status_value=${{ steps.get_column_id.outputs.value_id }}
 
   process_final_fix_issue:
     needs: issue_management
