@@ -39,9 +39,9 @@ jobs:
             issue_number: ${{ steps.get_issue_number.outputs.issue_number }},
           }).then(
             response => {
-              if (!response.data.pull_request) 
+              if (response.status === 200 && !response.data.pull_request) 
               {
-                core.setOutput('issue_exists', (response.status === 200).toString());
+                core.setOutput('issue_exists', 'true');
               }
             }
           );
