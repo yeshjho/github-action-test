@@ -32,10 +32,10 @@ jobs:
       run: |
         commit_message="${{ github.event.head_commit.message }}"
         shopt -s nocasematch
-        if [[ $commit_message =~ "(final fix (on|of)|finished( working on| fixing)?) +(the +)?((bug|issue) +)?#$ISSUE_NUMBER" ]]; then
+        if [[ $commit_message =~ "(final fix (on|of)|finished( working on| fixing)?) +(the +)?((bug|issue) +)?#${{ env.ISSUE_NUMBER }}" ]]; then
           echo "fix_status=fixed" >> $GITHUB_OUTPUT
           echo "column_name=Pending Release" >> $GITHUB_OUTPUT
-        elif [[ $commit_message =~ "(fixing|working on) +(the +)?((bug|issue) +)?#$ISSUE_NUMBER" ]]; then
+        elif [[ $commit_message =~ "(fixing|working on) +(the +)?((bug|issue) +)?#${{ env.ISSUE_NUMBER }}" ]]; then
           echo "fix_status=fixing" >> $GITHUB_OUTPUT
           echo "column_name=Fixing" >> $GITHUB_OUTPUT
         fi
