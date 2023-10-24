@@ -31,13 +31,18 @@ jobs:
       uses: actions/github-script@v6
       with:
         script: |
+          github.hook.error("rest", async (error, options) => {});
+
           github.rest.issues.get({
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: ${{ steps.get_issue_number.outputs.issue_number }},
           }).then(
             response => {
-              core.setOutput('issue_exists', (response.status === 200).toString());
+              if (!response.data.pull_request) 
+              {
+                core.setOutput('issue_exists', (response.status === 200).toString());
+              }
             }
           );
     
