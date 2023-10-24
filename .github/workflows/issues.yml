@@ -146,7 +146,7 @@ jobs:
     
     - name: Remove "Fixing" Label
       id: remove_fixing_label
-      if: ${{ steps.get_column_id.outputs.project_global_id != '' && steps.get_fix_status.outputs.fix_status == "fixed" }}
+      if: ${{ steps.get_column_id.outputs.project_global_id != '' && steps.get_fix_status.outputs.fix_status == 'fixed' }}
       uses: actions/github-script@v6
       with:
         github-token: ${{ secrets.SECRET_TOKEN }}
