@@ -127,7 +127,7 @@ jobs:
 
         echo 'project_global_id='$(jq '.data.user.projectV2.id' project_data.json) >> $GITHUB_OUTPUT
         echo 'field_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' project_data.json) >> $GITHUB_OUTPUT
-        echo 'value_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .options[] | select(.name==${{ steps.get_fix_status.outputs.column_name }}) |.id' project_data.json) >> $GITHUB_OUTPUT
+        echo 'value_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .options[] | select(.name== "${{ steps.get_fix_status.outputs.column_name }}") |.id' project_data.json) >> $GITHUB_OUTPUT
     
     - name: Move Card to Appropriate Column
       id: move_card_to_pending_release_column
