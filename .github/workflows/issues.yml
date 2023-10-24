@@ -68,8 +68,10 @@ jobs:
         }
 
         echo 'issue_status='$(jq '.data.repository.issue.labels.nodes[] | select(.name== "fixing") | .name' issue_labels.json) >> $GITHUB_OUTPUT
-        echo 'issue_status='$(jq '.data.repository.issue.labels.nodes[] | select(.name== "fixed") | .name' issue_labels.json) >> $GITHUB_OUTPUT
-    
+        if [[ ${{ steps.get_fix_status_in_msg.outputs.fix_status }} == '' ]]; then
+          echo 'issue_status='$(jq '.data.repository.issue.labels.nodes[] | select(.name== "fixed") | .name' issue_labels.json) >> $GITHUB_OUTPUT
+        fi
+
     - name: Get Card Id
       id: get_card_id
       if: ${{ steps.check_issue_status.outputs.no_issue != 'true' && 
