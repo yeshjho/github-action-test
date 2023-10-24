@@ -69,9 +69,7 @@ jobs:
           exit 0
         }
 
-        if [[ $? -eq 0 ]]; then
-          echo 'card_id='$(jq '.data.repository.issue.projectItems.nodes[] | select(.project.number== '$PROJECT_ID') | .id' card_data.json) >> $GITHUB_OUTPUT
-        fi
+        echo 'card_id='$(jq '.data.repository.issue.projectItems.nodes[] | select(.project.number== '$PROJECT_ID') | .id' card_data.json) >> $GITHUB_OUTPUT
     
     - name: Get Column ID
       id: get_column_id
