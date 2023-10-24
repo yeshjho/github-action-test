@@ -153,6 +153,6 @@ jobs:
           github.rest.issues.createComment({
             owner: context.repo.owner,
             repo: context.repo.repo,
-            issue_number: ${{ env.get_issue_number.outputs.issue_number }},
+            issue_number: ${{ steps.get_issue_number.outputs.issue_number }},
             body: steps.get_fix_status.outputs.fix_status == 'fixing' ? "The bug is being fixed.\n수정 중입니다." : "It is fixed now, the fix will be in the next release.\n수정되었습니다. 다음 릴리즈에 반영될 예정입니다.",
           });
