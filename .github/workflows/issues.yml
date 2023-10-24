@@ -156,7 +156,7 @@ jobs:
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: ${{ env.ISSUE_NUMBER }},
-            labels: [${{ steps.get_fixed_label_id.outputs.label_id }}],
+            labels: ["${{ steps.get_fixed_label_id.outputs.label_id }}"],
           });
     
     - name: Add Comment to Issue
