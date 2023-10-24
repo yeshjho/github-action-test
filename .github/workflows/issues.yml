@@ -189,7 +189,9 @@ jobs:
             repo: context.repo.repo,
             issue_number: ${{ steps.get_issue_number.outputs.issue_number }},
             name: "fixing",
-          });
+          }) || {
+            exit 0
+          };
           
     - name: Add Comment to Issue
       id: add_comment_to_issue
