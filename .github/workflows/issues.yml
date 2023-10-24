@@ -143,9 +143,24 @@ jobs:
             issue_number: ${{ steps.get_issue_number.outputs.issue_number }},
             labels: ["${{ steps.get_fix_status.outputs.fix_status }}"],
           });
+    
+    - name: Remove "Fixing" Label
+      id: remove_fixing_label
+      if: ${{ steps.get_column_id.outputs.project_global_id != '' and steps.get_fix_status.outputs.fix_status == "fixed" }}
+      uses: actions/github-script@v6
+      with:
+        github-token: ${{ secrets.SECRET_TOKEN }}
+        script: |
+          github.rest.issues.removeLabel({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: ${{ steps.get_issue_number.outputs.issue_number }},
+            name: "fixing",
+          });
           
     - name: Add Comment to Issue
       id: add_comment_to_issue
+      if: ${{ steps.get_column_id.outputs.project_global_id != '' }}
       uses: actions/github-script@v6
       with:
         github-token: ${{ secrets.SECRET_TOKEN }}
