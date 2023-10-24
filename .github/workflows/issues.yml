@@ -150,6 +150,7 @@ jobs:
       id: add_fixed_label_to_issue
       uses: actions/github-script@v6
       with:
+        github-token: ${{ secrets.SECRET_TOKEN }}
         script: |
           github.rest.issues.addLabels({
             owner: context.repo.owner,
@@ -162,6 +163,7 @@ jobs:
       id: add_comment_to_issue
       uses: actions/github-script@v6
       with:
+        github-token: ${{ secrets.SECRET_TOKEN }}
         script: |
           github.rest.issues.createComment({
             owner: context.repo.owner,
