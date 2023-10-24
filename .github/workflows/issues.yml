@@ -65,13 +65,15 @@ jobs:
               }
             }
           }
-        ' -f user="${{ env.USER_NAME }}" -f repo="${{ env.REPO_NAME }}" > card_data.json
+        ' -f user="${{ env.USER_NAME }}" -f repo="${{ env.REPO_NAME }}" > card_data.json || true
 
-        echo 'card_id='$(jq '.data.repository.issue.projectItems.nodes[] | select(.project.number== '$PROJECT_ID') | .id' card_data.json) >> $GITHUB_OUTPUT
+        if $? -eq 0; then
+          echo 'card_id='$(jq '.data.repository.issue.projectItems.nodes[] | select(.project.number== '$PROJECT_ID') | .id' card_data.json) >> $GITHUB_OUTPUT
+        fi
     
     - name: Get Column ID
       id: get_column_id
-      if: ${{ steps.get_fix_status.outputs.fix_status != '' }}
+      if: ${{ steps.get_card_id.outputs.card_id != '' }}
       env:
         GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
       run: |
@@ -103,7 +105,6 @@ jobs:
     
     - name: Move Card to Appropriate Column
       id: move_card_to_pending_release_column
-      if: ${{ steps.get_column_id.outputs.field_id != '' }}
       env:
         GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
       run: |
