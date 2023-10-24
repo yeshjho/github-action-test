@@ -63,7 +63,7 @@ jobs:
               }
             }
           }
-        ' -f user="${{ github.repository_owner }}" -f repo="${{ github.repository }}" > card_data.json || {
+        ' -f user="" -f repo="${{ github.repository }}" > card_data.json || {
           exit 0
         }
 
