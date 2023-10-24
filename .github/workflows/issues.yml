@@ -31,6 +31,9 @@ jobs:
       uses: actions/github-script@v6
       with:
         script: |
+          github.hook.after("request", async (response, options) => {
+            console.log(`${options.method} ${options.url}: ${response.status}`);
+          });
           github.hook.error("request", async (error, options) => {});
 
           github.rest.issues.get({
