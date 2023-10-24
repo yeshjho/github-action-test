@@ -91,7 +91,7 @@ jobs:
               }
             }
           }
-        ' -f user="yeshjho" -f repo="github-actions-test" > card_data.json
+        ' -f user="yeshjho" -f repo="github-action-test" > card_data.json
 
         echo 'card_id='$(jq '.data.repository.issue.projectItems.nodes[] | select(.project.number== '$PROJECT_ID') | .databaseId' card_data.json) >> $GITHUB_OUTPUT
     
@@ -102,7 +102,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
       run: |
         gh api graphql -f query='
-          query($user: String!, $project: Int!) {
+          query($user: String!, $project: ${{ env.PROJECT_ID }}) {
             user(login: $user) {
               projectV2(number: $project) {
                 id
@@ -121,7 +121,7 @@ jobs:
               }
             }
           }
-        ' -f user="yeshjho" -F project=$PROJECT_ID > project_data.json
+        ' -f user="yeshjho" > project_data.json
 
         echo 'column_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' project_data.json) >> $GITHUB_OUTPUT
     
