@@ -184,14 +184,14 @@ jobs:
       with:
         github-token: ${{ secrets.SECRET_TOKEN }}
         script: |
+          github.hook.error("request", async (error, options) => {});
+
           github.rest.issues.removeLabel({
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: ${{ steps.get_issue_number.outputs.issue_number }},
             name: "fixing",
-          }) || {
-            exit 0
-          };
+          });
           
     - name: Add Comment to Issue
       id: add_comment_to_issue
