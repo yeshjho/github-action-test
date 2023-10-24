@@ -114,38 +114,6 @@ jobs:
       ISSUE_NUMBER: ${{ needs.check_preconditions.outputs.issue_number }}
     
     steps:
-    
-    - name: Get "fixed" Label ID
-      id: get_fixed_label_id
-      uses: actions/github-script@v6
-      with:
-        script: |
-          github.hook.error("request", async (error, options) => { return error.response; });
-
-          github.rest.issues.listLabelsForRepo({
-            owner: context.repo.owner,
-            repo: context.repo.repo,
-          }).then(
-            response => {
-              if (response.status !== 200) 
-              {
-                console.log(response);
-                core.setFailed('Failed to get labels from the repository.');
-                return;
-              }
-
-              const label = response.data.find(label => label.name === "fixed");
-              if (label) 
-              {
-                core.setOutput('label_id', label.id.toString());
-              } 
-              else 
-              {
-                core.setFailed('Label "fixed" not found in the repository.');
-              }
-            }
-          );
-
     - name: Add "fixed" Label to Issue
       id: add_fixed_label_to_issue
       uses: actions/github-script@v6
@@ -156,7 +124,7 @@ jobs:
             owner: context.repo.owner,
             repo: context.repo.repo,
             issue_number: ${{ env.ISSUE_NUMBER }},
-            labels: ["${{ steps.get_fixed_label_id.outputs.label_id }}"],
+            labels: ["fixed"],
           });
     
     - name: Add Comment to Issue
