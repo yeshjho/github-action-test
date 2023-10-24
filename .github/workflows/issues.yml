@@ -125,6 +125,7 @@ jobs:
           }
         ' -f user="${{ env.USER_NAME }}" > project_data.json
 
+        echo 'project_global_id='$(jq '.data.user.projectV2.id' project_data.json) >> $GITHUB_OUTPUT
         echo 'column_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' project_data.json) >> $GITHUB_OUTPUT
     
     - name: Move Card to Appropriate Column
@@ -154,7 +155,7 @@ jobs:
               }
             }
           }
-        ' -f project=${{ env.PROJECT_ID }} -f item=${{ steps.get_card_id.outputs.card_id }} -f status_field=${{ steps.get_column_id.outputs.column_id }} -f status_value="${{ steps.get_fix_status.outputs.column_name }}"
+        ' -f project=${{ steps.get_column_id.outputs.project_global_id }} -f item=${{ steps.get_card_id.outputs.card_id }} -f status_field=${{ steps.get_column_id.outputs.column_id }} -f status_value="${{ steps.get_fix_status.outputs.column_name }}"
 
   process_final_fix_issue:
     needs: issue_management
