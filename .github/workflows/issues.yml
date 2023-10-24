@@ -1,0 +1,185 @@
+name: Issues Management
+
+on:
+  push:
+    branches: [ "*" ]
+
+env:
+  PROJECT_ID: 4
+
+jobs:
+  check_preconditions:
+    runs-on: ubuntu-latest
+
+    outputs:
+      issue_number: ${{ steps.get_issue_number.outputs.issue_number }}
+      fix_status: ${{ steps.get_fix_status.outputs.fix_status }}
+
+    steps:
+    - name: Get Issue Number
+      id: get_issue_number
+      run: |
+        commit_message="${{ github.event.head_commit.message }}"
+        if [[ $commit_message =~ \#([0-9]+) ]]; then
+          issue_number=${BASH_REMATCH[1]}
+          echo "issue_number=$issue_number" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Check If Issue Exists
+      id: check_issue_exists
+      if: ${{ steps.get_issue_number.outputs.issue_number != '' }}
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.get({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: steps.get_issue_number.outputs.issue_number,
+          }).then(
+            response => {
+              core.setOutput('issue_exists', (response.status === 200).toString());
+            }
+          );
+    
+    - name: Get Fix Status
+      id: get_fix_status
+      if: ${{ steps.check_issue_exists.outputs.issue_exists == 'true' }}
+      env:
+        ISSUE_NUMBER: ${{ steps.get_issue_number.outputs.issue_number }}
+      run: |
+        commit_message="${{ github.event.head_commit.message }}"
+        shopt -s nocasematch
+        if [[ $commit_message =~ "final fix on \#$ISSUE_NUMBER" ]]; then
+          echo "fix_status=final" >> $GITHUB_ENV
+        elif [[ $commit_message =~ "fixing \#$ISSUE_NUMBER" ]]; then
+          echo "fix_status=fixing" >> $GITHUB_ENV
+        fi
+
+  process_fixing_issue:
+    needs: check_preconditions
+    if: ${{ needs.check_preconditions.outputs.fix_status == 'fixing' }}
+    runs-on: ubuntu-latest
+    env:
+      ISSUE_NUMBER: ${{ needs.check_preconditions.outputs.issue_number }}
+    
+    steps:
+    - name: Get "Fixing" Column ID
+      id: get_fixing_column_id
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.projects.listColumns({
+            project_id: ${{ env.PROJECT_ID }},
+          }).then(
+            response => {
+              const column = response.data.find(col => col.name === "Fixing");
+              if (column) 
+              {
+                core.setOutput('column_id', column.id.toString());
+              } 
+              else 
+              {
+                core.setFailed('Column "Fixing" not found in the project.');
+              }
+            }
+          );
+    
+    - name: Move Card to "Fixing" Column
+      id: move_card_to_fixing_column
+      if: success()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.projects.moveCard({
+            card_id: ${{ github.event.issue.node_id }},
+            position: 'top',
+            column_id: ${{ steps.get_fixing_column_id.outputs.column_id }},
+          });
+  
+  process_final_fix_issue:
+    needs: check_preconditions
+    if: ${{ needs.check_preconditions.outputs.fix_status == 'final' }}
+    runs-on: ubuntu-latest
+    env:
+      ISSUE_NUMBER: ${{ needs.check_preconditions.outputs.issue_number }}
+    
+    steps:
+    - name: Get "Pending Release" Column ID
+      id: get_pending_release_column_id
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.projects.listColumns({
+            project_id: ${{ env.PROJECT_ID }},
+          }).then(
+            response => {
+              const column = response.data.find(col => col.name === "Pending Release");
+              if (column) 
+              {
+                core.setOutput('column_id', column.id.toString());
+              } 
+              else 
+              {
+                core.setFailed('Column "Pending Release" not found in the project.');
+              }
+            }
+          );
+    
+    - name: Move Card to "Pending Release" Column
+      id: move_card_to_pending_release_column
+      if: success()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.projects.moveCard({
+            card_id: ${{ github.event.issue.node_id }},
+            position: 'top',
+            column_id: ${{ steps.get_pending_release_column_id.outputs.column_id }},
+          });
+    
+    - name: Get "fixed" Label ID
+      id: get_fixed_label_id
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.listLabelsForRepo({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+          }).then(
+            response => {
+              const label = response.data.find(label => label.name === "fixed");
+              if (label) 
+              {
+                core.setOutput('label_id', label.id.toString());
+              } 
+              else 
+              {
+                core.setFailed('Label "fixed" not found in the repository.');
+              }
+            }
+          );
+
+    - name: Add "fixed" Label to Issue
+      id: add_fixed_label_to_issue
+      if: success()
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.addLabels({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: ${{ env.ISSUE_NUMBER }},
+            labels: [${{ steps.get_fixed_label_id.outputs.label_id }}],
+          });
+    
+    - name: Add Comment to Issue
+      id: add_comment_to_issue
+      uses: actions/github-script@v6
+      with:
+        script: |
+          github.rest.issues.createComment({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            issue_number: ${{ env.ISSUE_NUMBER }},
+            body: "It is fixed, and the fix will be in the next release.",
+          });
