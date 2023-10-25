@@ -29,7 +29,7 @@ jobs:
                       content {
                         ... on ProjectV2ItemContent {
                           ... on Issue {
-                            number
+                            id
                           }
                         }
                       }
@@ -160,7 +160,7 @@ jobs:
           .["Fixed Commit"] = $fields.text
         else
           .
-        end) | select(.["Status"] == "Pending Release" and .["Fixed Commit"] != null) | $node.id, $node.content.number, .["Fixed Commit"]' ../card_data.json | while read i; do
+        end) | select(.["Status"] == "Pending Release" and .["Fixed Commit"] != null) | $node.id, $node.content.id, .["Fixed Commit"]' ../card_data.json | while read i; do
           echo $i
           if [[ $state == "id" ]]; then
             card_id=$i
