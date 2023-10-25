@@ -123,6 +123,10 @@ jobs:
                         name
                       }
                     }
+                    ... on ProjectV2Field {
+                      id
+                      name
+                    }
                   }
                 }
               }
@@ -191,7 +195,7 @@ jobs:
               }
             }
           }
-        ' -f project=${{ steps.get_column_id.outputs.project_global_id }} -f item=${{ steps.get_card_id.outputs.card_id }} -f status_field=${{ steps.get_column_id.outputs.sha_field_id }} -f status_value=${{ matrix.commit.id }}
+        ' -f project=${{ steps.get_column_id.outputs.project_global_id }} -f item=${{ steps.get_card_id.outputs.card_id }} -f status_field=${{ steps.get_column_id.outputs.sha_field_id }} -f status_value="${{ matrix.commit.id }}"
 
     - name: Add Appropriate Label to Issue
       id: add_label_to_issue
