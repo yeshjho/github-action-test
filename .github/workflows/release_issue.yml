@@ -134,15 +134,7 @@ jobs:
           }
         '
 
-        echo $(jq -c '.data.user.projectV2.items.nodes[] | .id as $node_id | .fieldValues.nodes[] | 
-        reduce . as $fields ({}; 
-        if $fields.field.name == "Status" then 
-          .["Status"] = $fields.name 
-        elif $fields.field.name == "Fixed Commit" then 
-          .["Fixed Commit"] = $fields.text
-        else
-          .
-        end) | .["Status"]' ../card_data.json)
+        is_id=true
 
         jq -c '.data.user.projectV2.items.nodes[] | .id as $node_id | .fieldValues.nodes | 
         reduce .[] as $fields ({}; 
@@ -154,10 +146,14 @@ jobs:
           .
         end) | select(.["Status"] == "Pending Release" and .["Fixed Commit"] != null) | $node_id, .["Fixed Commit"]' ../card_data.json | while read i; do
           echo $i
-          card_id = echo $i | cut -d ", " -f 1
-          sha = echo $i | cut -d ", " -f 2
-          echo $card_id
-          echo $sha
+          if $is_id; then
+            card_id=$i
+            is_id=false
+            continue
+          else
+            sha=$i
+            is_id=true
+          fi
           git branch --contains $sha | grep -E '(^|\s)main($|\s)' || continue
           echo $i is in main
           gh api graphql -f query="$move_item" -f project=${{ steps.setup.outputs.project_id }} -f item=$card_id -f status_field=${{ steps.setup.outputs.status_field_id }} -f status_value=${{ steps.setup.outputs.pending_release_value_id }}
