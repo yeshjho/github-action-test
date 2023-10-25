@@ -147,7 +147,7 @@ jobs:
           select(.["Status"] == "Pending Release" and .["Fixed Commit"] != null) | .["Fixed Commit"]
         '
 
-        jq -c $query ../card_data.json | while read i; do
+        jq -c '$query' ../card_data.json | while read i; do
           echo $i
           card_id = echo $i | cut -d ", " -f 1
           sha = echo $i | cut -d ", " -f 2
