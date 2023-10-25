@@ -144,15 +144,15 @@ jobs:
           .
         end) | .["Status"]' ../card_data.json)
 
-        jq -c '.data.user.projectV2.items.nodes[] | .id as $node_id | .fieldValues.nodes[] | 
-        reduce . as $fields ({}; 
+        jq -c '.data.user.projectV2.items.nodes[] | .id as $node_id | .fieldValues.nodes | 
+        reduce .[] as $fields ({}; 
         if $fields.field.name == "Status" then 
           .["Status"] = $fields.name 
         elif $fields.field.name == "Fixed Commit" then 
           .["Fixed Commit"] = $fields.text
         else
           .
-        end) | select(.["Status"] == "Pending Release" and .["Fixed Commit"] != null) | .["Fixed Commit"]' ../card_data.json | while read i; do
+        end) | select(.["Status"] == "Pending Release" and .["Fixed Commit"] != null) | $node_id, .["Fixed Commit"]' ../card_data.json | while read i; do
           echo $i
           card_id = echo $i | cut -d ", " -f 1
           sha = echo $i | cut -d ", " -f 2
