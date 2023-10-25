@@ -1,0 +1,24 @@
+name: Issues Management with Releases
+
+on:
+  release:
+    types: [published]
+
+env:
+  PROJECT_ID: 4
+
+jobs:
+  issue_management_with_release:
+    if: ${{ !github.event.release.draft }}
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: 
+      run: |
+        git clone --filter=blob:none --bare ${{ github.event.repository }} repo
+        cd repo
+        for each item
+          if the status is pending release and sha is in main
+          issue: comment with tag name with link to the release, close
+          item: move to released
+        ${{ github.event.release.tag_name }}
