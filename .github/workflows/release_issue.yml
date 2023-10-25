@@ -56,9 +56,9 @@ jobs:
           }
         ' -f user="${{ github.repository_owner }}" > card_data.json
 
-        project_id = $(jq '.data.user.projectV2.id' project_data.json)
-        status_field_id = $(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' project_data.json)
-        pending_release_value_id = $(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .options[] | select(.name== "Pending Release") |.id' project_data.json)
+        project_id=$(jq '.data.user.projectV2.id' card_data.json)
+        status_field_id=$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' card_data.json)
+        pending_release_value_id=$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .options[] | select(.name== "Pending Release") |.id' card_data.json)
 
         git clone --filter=blob:none --bare ${{ github.event.repository }} repo
         cd repo
