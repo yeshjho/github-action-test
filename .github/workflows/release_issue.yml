@@ -6,6 +6,7 @@ on:
 
 env:
   PROJECT_ID: 4
+  MAIN_BRANCH: master
 
 jobs:
   issue_management_with_release:
@@ -156,12 +157,11 @@ jobs:
         reduce .[] as $fields ({}; 
         if $fields.field.name == "Status" then 
           .["Status"] = $fields.name 
-        elif $fields.field.name == "Fixed Commit" then 
-          .["Fixed Commit"] = $fields.text
+        elif $fields.field.name == "Commit Fixed" then 
+          .["Commit Fixed"] = $fields.text
         else
           .
-        end) | select(.["Status"] == "Pending Release" and .["Fixed Commit"] != null) | $node.id, $node.content.id, .["Fixed Commit"]' ../card_data.json | while read i; do
-          echo $i
+        end) | select(.["Status"] == "Pending Release" and .["Commit Fixed"] != null) | $node.id, $node.content.id, .["Commit Fixed"]' ../card_data.json | while read i; do
           if [[ $state == "id" ]]; then
             card_id=$i
             state="issue"
@@ -174,8 +174,7 @@ jobs:
             sha=$(echo $i | tr -d '"')
             state="id"
           fi
-          git branch --contains $sha | grep -E '(^|\s)master($|\s)' || continue
-          echo $i is in master
+          git branch --contains $sha | grep -E '(^|\s)${{ env.MAIN_BRANCH }}($|\s)' || continue
           gh api graphql -f query="$move_item" -f project=${{ steps.setup.outputs.project_id }} -f item=$card_id -f status_field=${{ steps.setup.outputs.status_field_id }} -f status_value=${{ steps.setup.outputs.released_value_id }}
           gh api graphql -f query="$add_comment" -f issue=$issue -f body=$'The fix was included in [${{ github.event.release.tag_name }}](${{ github.event.release.html_url }}).\n[${{ github.event.release.tag_name }}](${{ github.event.release.html_url }})에 수정사항이 포함되었습니다.'
           gh api graphql -f query="$close_issue" -f issue=$issue

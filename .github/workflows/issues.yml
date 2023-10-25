@@ -3,6 +3,7 @@ name: Issues Management
 on:
   push:
     branches: [ "**" ]
+    paths: [ "test/**", "two.txt" ]
 
 env:
   PROJECT_ID: 4
@@ -137,7 +138,7 @@ jobs:
 
         echo 'project_global_id='$(jq '.data.user.projectV2.id' project_data.json) >> $GITHUB_OUTPUT
         echo 'status_field_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' project_data.json) >> $GITHUB_OUTPUT
-        echo 'sha_field_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Fixed Commit") | .id' project_data.json) >> $GITHUB_OUTPUT
+        echo 'sha_field_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Commit Fixed") | .id' project_data.json) >> $GITHUB_OUTPUT
         echo 'value_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .options[] | select(.name== "${{ steps.get_fix_status_in_msg.outputs.column_name }}") |.id' project_data.json) >> $GITHUB_OUTPUT
     
     - name: Move Card to Appropriate Column
@@ -169,7 +170,7 @@ jobs:
           }
         ' -f project=${{ steps.get_column_id.outputs.project_global_id }} -f item=${{ steps.get_card_id.outputs.card_id }} -f status_field=${{ steps.get_column_id.outputs.status_field_id }} -f status_value=${{ steps.get_column_id.outputs.value_id }}
 
-    - name: Add Fixed Commit SHA to the Card
+    - name: Add Commit Fixed SHA to the Card
       id: add_fixed_commit_sha_to_the_card
       if: ${{ steps.get_column_id.outputs.project_global_id != '' && steps.get_fix_status_in_msg.outputs.fix_status == 'fixed' }}
       env:
