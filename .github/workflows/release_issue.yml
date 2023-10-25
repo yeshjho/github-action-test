@@ -60,7 +60,11 @@ jobs:
         status_field_id=$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' card_data.json)
         pending_release_value_id=$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .options[] | select(.name== "Pending Release") |.id' card_data.json)
 
-        git clone --filter=blob:none --bare ${{ github.event.repository }} repo
+        echo $project_id
+        echo $status_field_id
+        echo $pending_release_value_id
+
+        git clone --filter=blob:none --bare ${{ github.repositoryUrl }} repo
         cd repo
 
         add_comment = '
