@@ -26,7 +26,7 @@ jobs:
                   nodes {
                     ... on ProjectV2Item {
                       id
-                      fieldValues(first: 10) {
+                      fieldValues(first: 10, orderBy: { direction: DESC, field: POSITION}) {
                         nodes {
                           ... on ProjectV2ItemFieldValue {
                             ... on ProjectV2ItemFieldSingleSelectValue {
@@ -134,7 +134,20 @@ jobs:
           }
         '
 
-        jq -c '.data.user.projectV2.items.nodes[] | .id as $node_id | .fieldValues.nodes[] | . as $fields | select(.field.name== "Status" and .name== "Pending Release") | $fields | select(.field.name== "Fixed Commit") | .text' ../card_data.json | while read i; do
+        query='
+          .data.user.projectV2.items.nodes[] | .id as $node_id | .fieldValues.nodes[] | 
+          reduce . as $fields (
+            {};
+            if $fields.field.name == "Status" then
+              .["Status"] = $fields.name
+            elif $fields.field.name == "Fixed Commit" then
+              .["Fixed Commit"] = $fields.text
+            end
+          ) |
+          select(.["Status"] == "Pending Release" and .["Fixed Commit"] != null) | .["Fixed Commit"]
+        '
+
+        jq -c $query ../card_data.json | while read i; do
           echo $i
           card_id = echo $i | cut -d ", " -f 1
           sha = echo $i | cut -d ", " -f 2
