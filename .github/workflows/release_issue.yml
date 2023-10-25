@@ -25,11 +25,15 @@ jobs:
                   nodes {
                     ... on ProjectV2Item {
                       id
-                      fieldValueByName(name: "Status") {
-                        name
-                      }
-                      fieldValueByName(name: "Fixed Commit") {
-                        text
+                      fieldValues(first: 10) {
+                        nodes {
+                          ... on ProjectV2ItemFieldSingleSelectValue {
+                            name
+                          }
+                          ... on ProjectV2ItemFieldTextValue {
+                            text
+                          }
+                        }
                       }
                     }
                   }
@@ -101,7 +105,7 @@ jobs:
         '
 
         cat card_data.json
-        jq -c '.data.user.projectV2.items.nodes[] | select(.name== "Pending Release") | .id, .text' card_data.json | while read i; do
+        jq -c '.data.user.projectV2.items.nodes[] | .id as $node_id | .fieldValues.nodes[] | select(.name== "Pending Release") | .$node_id, .text' card_data.json | while read i; do
           echo $i
           card_id = echo $i | cut -d ", " -f 1
           sha = echo $i | cut -d ", " -f 2
