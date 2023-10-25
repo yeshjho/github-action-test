@@ -162,11 +162,11 @@ jobs:
           .
         end) | select(.["Status"] == "Pending Release" and .["Fixed Commit"] != null) | $node.id, $node.content.number, .["Fixed Commit"]' ../card_data.json | while read i; do
           echo $i
-          if $state == "id"; then
+          if [[ $state == "id" ]]; then
             card_id=$i
             state="issue"
             continue
-          elif $state == "issue"; then
+          elif [[ $state == "issue" ]]; then
             issue=$i
             state="sha"
             continue
