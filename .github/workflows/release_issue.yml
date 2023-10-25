@@ -93,7 +93,7 @@ jobs:
       run: |
         cd repo
 
-        add_comment = '
+        add_comment='
           mutation(
             $issue: ID!
             $body: String!
@@ -105,7 +105,7 @@ jobs:
           }
         '
 
-        close_issue = '
+        close_issue='
           mutation(
             $issue: ID!
           ) {
@@ -115,7 +115,7 @@ jobs:
           }
         '
 
-        move_item = '
+        move_item='
           mutation(
             $project: ID!
             $item: ID!
