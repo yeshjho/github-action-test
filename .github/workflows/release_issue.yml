@@ -15,10 +15,99 @@ jobs:
     steps:
     - name: 
       run: |
+        gh api graphql -f query='
+          query($user: String!) {
+            user(login: $user) {
+              projectV2(number: ${{ env.PROJECT_ID }}) {
+                items(first: 100) {
+                  nodes {
+                    ... on ProjectV2Item {
+                      id
+                      fieldValueByName(name: "Status") {
+                        name
+                      }
+                      fieldValueByName(name: "Fixed Commit") {
+                        text
+                      }
+                    }
+                  }
+                }
+                id
+                fields(first: 20) {
+                  nodes {
+                    ... on ProjectV2SingleSelectField {
+                      id
+                      name
+                      options {
+                        id
+                        name
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ' -f user="${{ github.repository_owner }}" > card_data.json
+
+        project_id = $(jq '.data.user.projectV2.id' project_data.json)
+        status_field_id = $(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' project_data.json)
+        pending_release_value_id = $(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .options[] | select(.name== "Pending Release") |.id' project_data.json)
+
         git clone --filter=blob:none --bare ${{ github.event.repository }} repo
         cd repo
-        for each item
-          if the status is pending release and sha is in main
-          issue: comment with tag name with link to the release, close
-          item: move to released
+
+        add_comment = '
+          mutation(
+            $issue: ID!
+            $body: String!
+          ) {
+            addComment(input: {
+              subjectId: $issue
+              body: $body
+            })
+          }
+        '
+
+        close_issue = '
+          mutation(
+            $issue: ID!
+          ) {
+            closeIssue(input: {
+              issueId: $issue
+            })
+          }
+        '
+
+        move_item = '
+          mutation(
+            $project: ID!
+            $item: ID!
+            $status_field: ID!
+            $status_value: String!
+          ) {
+            updateProjectV2ItemFieldValue(input: {
+                projectId: $project
+                itemId: $item
+                fieldId: $status_field
+                value: { 
+                  singleSelectOptionId: $status_value
+                }
+              }
+            )
+          }
+        '
+
+        cat card_data.json
+        jq -c '.data.user.projectV2.items.nodes[] | select(.name== "Pending Release") | .id, .text' card_data.json | while read i; do
+          echo $i
+          card_id = echo $i | cut -d ", " -f 1
+          sha = echo $i | cut -d ", " -f 2
+          echo $card_id
+          echo $sha
+          git branch --contains $sha | grep -E '(^|\s)main($|\s)' || continue
+          echo $i is in main
+          gh api graphql -f query="$move_item" -f project=$project_id -f item=$card_id -f status_field=$status_field_id -f status_value=$pending_release_value_id
+        done
+
         ${{ github.event.release.tag_name }}
