@@ -26,7 +26,14 @@ jobs:
                   nodes {
                     ... on ProjectV2Item {
                       id
-                      fieldValues(first: 10, orderBy: { direction: DESC, field: POSITION}) {
+                      content {
+                        ... on ProjectV2ItemContent {
+                          ... on Issue {
+                            number
+                          }
+                        }
+                      }
+                      fieldValues(first: 10, orderBy: { direction: DESC, field: POSITION }) {
                         nodes {
                           ... on ProjectV2ItemFieldValue {
                             ... on ProjectV2ItemFieldSingleSelectValue {
@@ -69,6 +76,8 @@ jobs:
           }
         ' -f user="${{ github.repository_owner }}" > card_data.json
 
+        cat card_data.json
+
         echo 'project_id'=$(jq '.data.user.projectV2.id' card_data.json) >> $GITHUB_OUTPUT
         echo 'status_field_id'=$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' card_data.json) >> $GITHUB_OUTPUT
         echo 'pending_release_value_id'=$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .options[] | select(.name== "Pending Release") | .id' card_data.json) >> $GITHUB_OUTPUT
@@ -93,10 +102,16 @@ jobs:
             $issue: ID!
             $body: String!
           ) {
-            addComment(input: {
+            set_status: addComment(input: {
               subjectId: $issue
               body: $body
-            })
+            }) {
+              commentEdge {
+                node {
+                  id
+                }
+              }
+            }
           }
         '
 
@@ -104,9 +119,13 @@ jobs:
           mutation(
             $issue: ID!
           ) {
-            closeIssue(input: {
+            set_status: closeIssue(input: {
               issueId: $issue
-            })
+            }) {
+              issue {
+                id
+              }
+            }
           }
         '
 
@@ -133,9 +152,9 @@ jobs:
           }
         '
 
-        is_id=true
+        state="id"
 
-        jq -c '.data.user.projectV2.items.nodes[] | .id as $node_id | .fieldValues.nodes | 
+        jq -c '.data.user.projectV2.items.nodes[] | .id as $node_id, .[0][0].number as $issue | .fieldValues.nodes | 
         reduce .[] as $fields ({}; 
         if $fields.field.name == "Status" then 
           .["Status"] = $fields.name 
@@ -143,19 +162,23 @@ jobs:
           .["Fixed Commit"] = $fields.text
         else
           .
-        end) | select(.["Status"] == "Pending Release" and .["Fixed Commit"] != null) | $node_id, .["Fixed Commit"]' ../card_data.json | while read i; do
+        end) | select(.["Status"] == "Pending Release" and .["Fixed Commit"] != null) | $node_id, $issue, .["Fixed Commit"]' ../card_data.json | while read i; do
           echo $i
-          if $is_id; then
+          if $state == "id"; then
             card_id=$i
-            is_id=false
+            state="issue"
             continue
-          else
+          elif $state == "issue"; then
+            issue=$i
+            state="sha"
+            continue
+          else 
             sha=$(echo $i | tr -d '"')
-            is_id=true
+            state="id"
           fi
           git branch --contains $sha | grep -E '(^|\s)master($|\s)' || continue
           echo $i is in master
           gh api graphql -f query="$move_item" -f project=${{ steps.setup.outputs.project_id }} -f item=$card_id -f status_field=${{ steps.setup.outputs.status_field_id }} -f status_value=${{ steps.setup.outputs.released_value_id }}
+          gh api graphql -f query="$add_comment" -f issue=$issue -f body="The fix was included in [${{ github.event.release.tag_name }}](${{ github.event.release.html_url }}).\n[${{ github.event.release.tag_name }}](${{ github.event.release.html_url }})에 수정사항이 포함되었습니다."
+          gh api graphql -f query="$close_issue" -f issue=$issue
         done
-
-        ${{ github.event.release.tag_name }}
