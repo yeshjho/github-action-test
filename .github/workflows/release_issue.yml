@@ -151,7 +151,7 @@ jobs:
             is_id=false
             continue
           else
-            sha=$i
+            sha=$(echo $i | tr -d '"')
             is_id=true
           fi
           git branch --contains $sha | grep -E '(^|\s)main($|\s)' || continue
