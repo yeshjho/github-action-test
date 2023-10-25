@@ -9,8 +9,8 @@ env:
 
 jobs:
   issue_management:
-    continue-on-error: true
     strategy:
+      fail-fast: false
       max-parallel: 1
       matrix:
         commit: ${{ github.event.commits }}
