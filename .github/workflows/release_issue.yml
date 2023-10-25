@@ -13,7 +13,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: On Release
+    - name: Setup
+      id: setup
       env:
         GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
       run: |
@@ -56,15 +57,28 @@ jobs:
           }
         ' -f user="${{ github.repository_owner }}" > card_data.json
 
-        project_id=$(jq '.data.user.projectV2.id' card_data.json)
-        status_field_id=$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' card_data.json)
-        pending_release_value_id=$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .options[] | select(.name== "Pending Release") |.id' card_data.json)
+        cat card_data.json
+
+        echo 'project_id'='$(jq '.data.user.projectV2.id' card_data.json)' >> $GITHUB_OUTPUT
+        echo 'status_field_id'='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' card_data.json)' >> $GITHUB_OUTPUT
+        echo 'pending_release_value_id'='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .options[] | select(.name== "Pending Release") |.id' card_data.json)' >> $GITHUB_OUTPUT
 
         echo $project_id
         echo $status_field_id
         echo $pending_release_value_id
 
-        git clone --filter=blob:none --bare ${{ github.repositoryUrl }} repo
+    - name: Clone Repo
+      id: clone_repo
+      env:
+        GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
+      run: |
+        git clone --filter=blob:none --bare https://github.com/${{ github.repository }}.git repo
+
+    - name: Process Issues
+      id: process_issues
+      env:
+        GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
+      run: |
         cd repo
 
         add_comment = '
@@ -108,7 +122,6 @@ jobs:
           }
         '
 
-        cat card_data.json
         jq -c '.data.user.projectV2.items.nodes[] | .id as $node_id | .fieldValues.nodes[] | select(.name== "Pending Release") | .$node_id, .text' card_data.json | while read i; do
           echo $i
           card_id = echo $i | cut -d ", " -f 1
@@ -117,7 +130,7 @@ jobs:
           echo $sha
           git branch --contains $sha | grep -E '(^|\s)main($|\s)' || continue
           echo $i is in main
-          gh api graphql -f query="$move_item" -f project=$project_id -f item=$card_id -f status_field=$status_field_id -f status_value=$pending_release_value_id
+          gh api graphql -f query="$move_item" -f project=${{ steps.setup.outputs.project_id }} -f item=$card_id -f status_field=${{ steps.setup.outputs.status_field_id }} -f status_value=${{ steps.setup.outputs.pending_release_value_id }}
         done
 
         ${{ github.event.release.tag_name }}
