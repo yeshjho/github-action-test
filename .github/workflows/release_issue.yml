@@ -74,6 +74,7 @@ jobs:
         echo 'project_id'=$(jq '.data.user.projectV2.id' card_data.json) >> $GITHUB_OUTPUT
         echo 'status_field_id'=$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' card_data.json) >> $GITHUB_OUTPUT
         echo 'pending_release_value_id'=$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .options[] | select(.name== "Pending Release") | .id' card_data.json) >> $GITHUB_OUTPUT
+        echo 'released_value_id'=$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .options[] | select(.name== "Released") | .id' card_data.json) >> $GITHUB_OUTPUT
 
         echo $project_id
         echo $status_field_id
@@ -156,7 +157,7 @@ jobs:
           fi
           git branch --contains $sha | grep -E '(^|\s)main($|\s)' || continue
           echo $i is in main
-          gh api graphql -f query="$move_item" -f project=${{ steps.setup.outputs.project_id }} -f item=$card_id -f status_field=${{ steps.setup.outputs.status_field_id }} -f status_value=${{ steps.setup.outputs.pending_release_value_id }}
+          gh api graphql -f query="$move_item" -f project=${{ steps.setup.outputs.project_id }} -f item=$card_id -f status_field=${{ steps.setup.outputs.status_field_id }} -f status_value=${{ steps.setup.outputs.released_value_id }}
         done
 
         ${{ github.event.release.tag_name }}
