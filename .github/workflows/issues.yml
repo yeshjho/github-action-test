@@ -34,7 +34,7 @@ jobs:
       run: |
         commit_message="${{ matrix.commit.message }}"
         shopt -s nocasematch
-        if [[ $commit_message =~ (final fix (on|of)|finished( working on| fixing)?)\ +(the +)?((bug|issue) +)?#${{ env.ISSUE_NUMBER }} ]]; then
+        if [[ $commit_message =~ (fixes|fixed|final fix (on|of)|finished( working on| fixing)?)\ +(the +)?((bug|issue) +)?#${{ env.ISSUE_NUMBER }} ]]; then
           echo "fix_status=fixed" >> $GITHUB_OUTPUT
           echo "column_name=Pending Release" >> $GITHUB_OUTPUT
         elif [[ $commit_message =~ (fixing|working on)\ +(the +)?((bug|issue) +)?#${{ env.ISSUE_NUMBER }} ]]; then
@@ -131,7 +131,8 @@ jobs:
         ' -f user="${{ github.repository_owner }}" > project_data.json
 
         echo 'project_global_id='$(jq '.data.user.projectV2.id' project_data.json) >> $GITHUB_OUTPUT
-        echo 'field_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' project_data.json) >> $GITHUB_OUTPUT
+        echo 'status_field_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' project_data.json) >> $GITHUB_OUTPUT
+        echo 'sha_field_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Fixed Commit") | .id' project_data.json) >> $GITHUB_OUTPUT
         echo 'value_id='$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .options[] | select(.name== "${{ steps.get_fix_status_in_msg.outputs.column_name }}") |.id' project_data.json) >> $GITHUB_OUTPUT
     
     - name: Move Card to Appropriate Column
@@ -161,7 +162,36 @@ jobs:
               }
             }
           }
-        ' -f project=${{ steps.get_column_id.outputs.project_global_id }} -f item=${{ steps.get_card_id.outputs.card_id }} -f status_field=${{ steps.get_column_id.outputs.field_id }} -f status_value=${{ steps.get_column_id.outputs.value_id }}
+        ' -f project=${{ steps.get_column_id.outputs.project_global_id }} -f item=${{ steps.get_card_id.outputs.card_id }} -f status_field=${{ steps.get_column_id.outputs.status_field_id }} -f status_value=${{ steps.get_column_id.outputs.value_id }}
+
+    - name: Add Fixed Commit SHA to the Card
+      id: add_fixed_commit_sha_to_the_card
+      if: ${{ steps.get_column_id.outputs.project_global_id != '' && steps.get_fix_status_in_msg.outputs.fix_status == 'fixed' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
+      run: |
+        gh api graphql -f query='
+          mutation(
+            $project: ID!
+            $item: ID!
+            $status_field: ID!
+            $status_value: String!
+          ) {
+            set_status: updateProjectV2ItemFieldValue(input: {
+                projectId: $project
+                itemId: $item
+                fieldId: $status_field
+                value: { 
+                  singleSelectOptionId: $status_value
+                }
+              }
+            ) {
+              projectV2Item {
+                id
+              }
+            }
+          }
+        ' -f project=${{ steps.get_column_id.outputs.project_global_id }} -f item=${{ steps.get_card_id.outputs.card_id }} -f status_field=${{ steps.get_column_id.outputs.sha_field_id }} -f status_value=${{ matrix.commit.id }}
 
     - name: Add Appropriate Label to Issue
       id: add_label_to_issue
