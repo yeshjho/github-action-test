@@ -134,6 +134,16 @@ jobs:
           }
         '
 
+        echo $(jq -c '.data.user.projectV2.items.nodes[] | .id as $node_id | .fieldValues.nodes[] | 
+        reduce . as $fields ({}; 
+        if $fields.field.name == "Status" then 
+          .["Status"] = $fields.name 
+        elif $fields.field.name == "Fixed Commit" then 
+          .["Fixed Commit"] = $fields.text
+        else
+          .
+        end) | .["Status"]' ../card_data.json)
+
         jq -c '.data.user.projectV2.items.nodes[] | .id as $node_id | .fieldValues.nodes[] | 
         reduce . as $fields ({}; 
         if $fields.field.name == "Status" then 
