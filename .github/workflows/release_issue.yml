@@ -13,7 +13,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: 
+    - name: On Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.SECRET_TOKEN }}
       run: |
         gh api graphql -f query='
           query($user: String!) {
