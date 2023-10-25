@@ -76,8 +76,6 @@ jobs:
           }
         ' -f user="${{ github.repository_owner }}" > card_data.json
 
-        cat card_data.json
-
         echo 'project_id'=$(jq '.data.user.projectV2.id' card_data.json) >> $GITHUB_OUTPUT
         echo 'status_field_id'=$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .id' card_data.json) >> $GITHUB_OUTPUT
         echo 'pending_release_value_id'=$(jq '.data.user.projectV2.fields.nodes[] | select(.name== "Status") | .options[] | select(.name== "Pending Release") | .id' card_data.json) >> $GITHUB_OUTPUT
@@ -154,7 +152,7 @@ jobs:
 
         state="id"
 
-        jq -c '.data.user.projectV2.items.nodes[] | .id as $node_id, .[0][0].number as $issue | .fieldValues.nodes | 
+        jq -c '.data.user.projectV2.items.nodes[] | . as $node | .fieldValues.nodes | 
         reduce .[] as $fields ({}; 
         if $fields.field.name == "Status" then 
           .["Status"] = $fields.name 
@@ -162,7 +160,7 @@ jobs:
           .["Fixed Commit"] = $fields.text
         else
           .
-        end) | select(.["Status"] == "Pending Release" and .["Fixed Commit"] != null) | $node_id, $issue, .["Fixed Commit"]' ../card_data.json | while read i; do
+        end) | select(.["Status"] == "Pending Release" and .["Fixed Commit"] != null) | $node.id, $node.content.number, .["Fixed Commit"]' ../card_data.json | while read i; do
           echo $i
           if $state == "id"; then
             card_id=$i
